@@ -12,7 +12,8 @@ const (
 type Message struct {
 	Ch      string `json:"ch,omitempty"`
 	Method  Method `json:"method,omitempty"`
-	Payload any `json:"payload,omitempty"`
+	Payload any    `json:"payload,omitempty"`
+	Ts      int64  `json:"ts"`
 }
 
 type SocketConnection interface {
