@@ -18,16 +18,9 @@ var (
 
 func RootHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("[new] connection request incoming from: ", r.RemoteAddr)
-	newConn, _ := upgrader.Upgrade(w, r, nil)
-
-	hub := ConnectionHub
-	
-	hub.Mu.Lock()
-	hub.Connections[r.RemoteAddr] = newConn
-	hub.Mu.Unlock()
-
-	reader(newConn)
-
+	conn, _ := upgrader.Upgrade(w, r, nil)
+	ConnectionHub.AddConnection(r.RemoteAddr, conn)
+	reader(conn)
 }
 
 func reader(conn *websocket.Conn) {
@@ -42,12 +35,19 @@ func reader(conn *websocket.Conn) {
 		case types.UNSUB:
 			ConnectionHub.UnSubscribe(conn.RemoteAddr().String(), message.Ch)
 		default:
+			ConnectionHub.Mu.Lock()
+			keys := make([]string, 0, len(ConnectionHub.UpgradedSubs))
+			for k := range ConnectionHub.UpgradedSubs {
+				keys = append(keys, k)
+			}
+			
 			message = &types.Message{
 				Ch: "error",
-				Payload: "Invalid request",
+				Payload: keys,
 			}
 			marshalled, _ := json.Marshal(message)
 			conn.WriteMessage(websocket.TextMessage, marshalled);
+			ConnectionHub.Mu.Unlock()
 			continue
 		}
 	}
