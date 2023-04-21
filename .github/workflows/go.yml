@@ -27,5 +27,6 @@ jobs:
     - name: Create release
       uses: wangyoucao577/go-release-action@v1.37
       with:
+        github_token: ${{ secrets.AUTH_TOKEN }}
         tag_name: ${{ github.run_number }}
         release_name: Release $${{ github.run_number }}
