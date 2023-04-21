@@ -10,9 +10,7 @@ import (
 	"github.com/gokul656/go-sockets/mockers"
 )
 
-var (
-	addr = flag.String("addr", ":8080", "ws service address")
-)
+var addr = flag.String("addr", ":8080", "ws service address")
 
 func main() {
 	flag.Parse()

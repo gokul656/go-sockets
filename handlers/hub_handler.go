@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log"
 	"sync"
 
@@ -13,8 +14,10 @@ type Hub struct {
 	UpgradedSubs map[string]map[string]struct{} // using struct, it consumes 0 bytes
 }
 
+
 var (
 	ConnectionHub *Hub = setupHub()
+	availableTopics map[string]bool = make(map[string]bool)
 )
 
 func setupHub() *Hub {
@@ -22,6 +25,9 @@ func setupHub() *Hub {
 		Connections:  make(map[string]*websocket.Conn),
 		UpgradedSubs: map[string]map[string]struct{}{},
 	}
+
+	availableTopics["ticker"] = true
+	availableTopics["market"] = true
 
 	return hub
 }
@@ -34,11 +40,12 @@ func (h *Hub) AddConnection(name string, conn *websocket.Conn) {
 }
 
 func (h *Hub) RemoveConnection(name string) {
-	h.Mu.Lock()
-	defer h.Mu.Unlock()
+	// TO-DO: Fix lock issue
+	// h.Mu.TryLock()
+	// defer h.Mu.Unlock()
 
 	// removing connections from actual connections list
-	_ = h.close(name)
+	h.close(name)
 	delete(h.Connections, name)
 
 	// removing connection reference from subscriptions
@@ -51,9 +58,13 @@ func (h *Hub) GetConnection(name string) *websocket.Conn {
 	return h.Connections[name]
 }
 
-func (h *Hub) Subscribe(conn string, topic string) {
+func (h *Hub) Subscribe(conn string, topic string) error {
 	h.Mu.Lock()
 	defer h.Mu.Unlock()
+
+	if _, ok := availableTopics[topic]; !ok {
+		return errors.New("topic is unavailable or invalid")
+	}
 
 	// creating topic if not exists
 	if _, ok := h.UpgradedSubs[topic]; !ok {
@@ -62,6 +73,8 @@ func (h *Hub) Subscribe(conn string, topic string) {
 
 	// appending to topics[] if already exists
 	h.UpgradedSubs[topic][conn] = struct{}{}
+	
+	return nil
 }
 
 func (h *Hub) GetSubscriptions(conn string) []string {
@@ -98,7 +111,8 @@ func (h *Hub) Broadcast(topic string, event []byte) {
 		} else {
 			err := conn.WriteMessage(websocket.TextMessage, event)
 			if err != nil {
-				log.Println("[error]", err)
+				log.Println("[error] socket abruptly closed")
+				h.RemoveConnection(peer)
 			}
 		}
 	}
