@@ -5,24 +5,24 @@ import (
 	"log"
 	"sync"
 
+	"github.com/gokul656/go-sockets/types"
 	"github.com/gorilla/websocket"
 )
 
 type Hub struct {
 	Mu           sync.Mutex
-	Connections  map[string]*websocket.Conn
+	Connections  map[string]*types.Connection
 	UpgradedSubs map[string]map[string]struct{} // using struct, it consumes 0 bytes
 }
 
-
 var (
-	ConnectionHub *Hub = setupHub()
+	ConnectionHub   *Hub            = setupHub()
 	availableTopics map[string]bool = make(map[string]bool)
 )
 
 func setupHub() *Hub {
 	hub := &Hub{
-		Connections:  make(map[string]*websocket.Conn),
+		Connections:  make(map[string]*types.Connection),
 		UpgradedSubs: map[string]map[string]struct{}{},
 	}
 
@@ -32,11 +32,11 @@ func setupHub() *Hub {
 	return hub
 }
 
-func (h *Hub) AddConnection(name string, conn *websocket.Conn) {
+func (h *Hub) AddConnection(name string, soc *types.Connection) {
 	h.Mu.Lock()
 	defer h.Mu.Unlock()
 
-	h.Connections[name] = conn
+	h.Connections[name] = soc
 }
 
 func (h *Hub) RemoveConnection(name string) {
@@ -54,7 +54,7 @@ func (h *Hub) RemoveConnection(name string) {
 	}
 }
 
-func (h *Hub) GetConnection(name string) *websocket.Conn {
+func (h *Hub) GetConnection(name string) *types.Connection {
 	return h.Connections[name]
 }
 
@@ -73,7 +73,7 @@ func (h *Hub) Subscribe(conn string, topic string) error {
 
 	// appending to topics[] if already exists
 	h.UpgradedSubs[topic][conn] = struct{}{}
-	
+
 	return nil
 }
 
@@ -97,7 +97,7 @@ func (h *Hub) UnSubscribe(conn string, topic string) {
 }
 
 func (h *Hub) close(conn string) error {
-	return h.Connections[conn].Close()
+	return h.Connections[conn].Conn.Close()
 }
 
 func (h *Hub) Broadcast(topic string, event []byte) {
@@ -105,15 +105,19 @@ func (h *Hub) Broadcast(topic string, event []byte) {
 	defer h.Mu.Unlock()
 
 	for peer := range h.UpgradedSubs[topic] {
-		conn := h.GetConnection(peer)
+		soc := h.GetConnection(peer)
+		conn := soc.Conn
 		if conn == nil {
 			h.RemoveConnection(peer)
 		} else {
+			soc.ConnMu.Lock()
 			err := conn.WriteMessage(websocket.TextMessage, event)
 			if err != nil {
 				log.Println("[error] socket abruptly closed")
 				h.RemoveConnection(peer)
 			}
+
+			soc.ConnMu.Unlock()
 		}
 	}
 }
