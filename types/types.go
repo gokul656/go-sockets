@@ -1,5 +1,11 @@
 package types
 
+import (
+	"sync"
+
+	"github.com/gorilla/websocket"
+)
+
 type Method string
 
 type Topic string
@@ -26,4 +32,9 @@ type SocketConnection interface {
 	GetSubscriptions(conn string) []string
 	UnSubscribe(conn string, topic string)
 	Close(conn string) error
+}
+
+type Connection struct {
+	ConnMu sync.Mutex
+	Conn *websocket.Conn
 }
