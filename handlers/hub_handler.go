@@ -5,13 +5,17 @@ import (
 	"log"
 	"sync"
 
-	"github.com/gokul656/go-sockets/types"
 	"github.com/gorilla/websocket"
 )
 
+type Connection struct {
+	ConnMu sync.Mutex
+	Conn   *websocket.Conn
+}
+
 type Hub struct {
 	Mu           sync.Mutex
-	Connections  map[string]*types.Connection
+	Connections  map[string]*Connection
 	UpgradedSubs map[string]map[string]struct{} // using struct, it consumes 0 bytes
 }
 
@@ -22,7 +26,7 @@ var (
 
 func setupHub() *Hub {
 	hub := &Hub{
-		Connections:  make(map[string]*types.Connection),
+		Connections:  make(map[string]*Connection),
 		UpgradedSubs: map[string]map[string]struct{}{},
 	}
 
@@ -32,7 +36,15 @@ func setupHub() *Hub {
 	return hub
 }
 
-func (h *Hub) AddConnection(name string, soc *types.Connection) {
+func (s *Connection) SendMessage(messageType int, message []byte) error {
+	s.ConnMu.Lock()
+	defer s.ConnMu.Unlock()
+
+	err := s.Conn.WriteMessage(messageType, message)
+	return err
+}
+
+func (h *Hub) AddConnection(name string, soc *Connection) {
 	h.Mu.Lock()
 	defer h.Mu.Unlock()
 
@@ -54,7 +66,7 @@ func (h *Hub) RemoveConnection(name string) {
 	}
 }
 
-func (h *Hub) GetConnection(name string) *types.Connection {
+func (h *Hub) GetConnection(name string) *Connection {
 	return h.Connections[name]
 }
 
@@ -104,20 +116,23 @@ func (h *Hub) Broadcast(topic string, event []byte) {
 	h.Mu.Lock()
 	defer h.Mu.Unlock()
 
-	for peer := range h.UpgradedSubs[topic] {
-		soc := h.GetConnection(peer)
-		conn := soc.Conn
-		if conn == nil {
-			h.RemoveConnection(peer)
-		} else {
-			soc.ConnMu.Lock()
-			err := conn.WriteMessage(websocket.TextMessage, event)
-			if err != nil {
-				log.Println("[error] socket abruptly closed")
+	if topic == "ping" {
+		for _, conns := range h.Connections {
+			conns.SendMessage(websocket.PingMessage, event)
+		}
+	} else {
+		for peer := range h.UpgradedSubs[topic] {
+			soc := h.GetConnection(peer)
+			conn := soc.Conn
+			if conn == nil {
 				h.RemoveConnection(peer)
+			} else {
+				err := soc.SendMessage(websocket.TextMessage, event)
+				if err != nil {
+					log.Println("[error] unable to send message to", peer)
+					h.RemoveConnection(peer)
+				}
 			}
-
-			soc.ConnMu.Unlock()
 		}
 	}
 }

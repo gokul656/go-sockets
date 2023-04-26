@@ -1,11 +1,5 @@
 package types
 
-import (
-	"sync"
-
-	"github.com/gorilla/websocket"
-)
-
 type Method string
 
 type Topic string
@@ -16,7 +10,7 @@ const (
 )
 
 type Ping struct {
-	Ping int64 `json:"ping"`
+	Ping    int64 `json:"ping"`
 	Message string
 }
 
@@ -32,9 +26,4 @@ type SocketConnection interface {
 	GetSubscriptions(conn string) []string
 	UnSubscribe(conn string, topic string)
 	Close(conn string) error
-}
-
-type Connection struct {
-	ConnMu sync.Mutex
-	Conn *websocket.Conn
 }

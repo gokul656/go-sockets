@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	address = flag.String("address", "localhost:8080", "")
-	serverURL     = url.URL{Scheme: "ws", Host: *address, Path: "/ws"}
+	address   = flag.String("address", "localhost:8080", "")
+	serverURL = url.URL{Scheme: "ws", Host: *address, Path: "/ws"}
 
 	pongWait = 5 * time.Second
 )
@@ -28,8 +28,8 @@ func main() {
 	defer conn.Close()
 
 	conn.SetReadDeadline(time.Now().Add(pongWait))
-	conn.SetPingHandler(func(appData string) error {
-		pong:= &Pong{Pong: time.Now().UnixMilli()}
+	conn.SetPingHandler(func(ping string) error {
+		pong := &Pong{Pong: time.Now().UnixMilli()}
 		marshaled, _ := json.Marshal(pong)
 		conn.WriteMessage(websocket.PongMessage, []byte(marshaled))
 
@@ -37,7 +37,7 @@ func main() {
 	})
 
 	subscribe(conn, "ticker", "market", "unknown")
-	
+
 	for {
 		messageType, payload, err := conn.ReadMessage()
 		if err != nil {
@@ -57,9 +57,9 @@ func connect() (*websocket.Conn, error) {
 func subscribe(conn *websocket.Conn, topics ...string) {
 	for _, topic := range topics {
 		body := &types.Message{
-			Ch: topic,
+			Ch:     topic,
 			Method: "sub",
-			Ts: time.Now().UnixMilli(),
+			Ts:     time.Now().UnixMilli(),
 		}
 
 		marshalled, _ := json.Marshal(body)
