@@ -22,43 +22,33 @@ var (
 func RootHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("[new] connection request incoming from: ", r.RemoteAddr)
 	conn, _ := upgrader.Upgrade(w, r, nil)
-	conn.SetReadDeadline(time.Now().Add(pongWait))
-	soc := &types.Connection{
+	soc := &Connection{
 		Conn: conn,
 	}
 
-	go handlePing(soc)
-	
+	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(data string) error {
 		return conn.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
 	ConnectionHub.AddConnection(r.RemoteAddr, soc)
-	socketReader(soc)
+	go socketReader(soc)
 }
 
-func handlePing(soc *types.Connection) {
-	conn := soc.Conn
+func PingHandler() {
 	pingTicker := time.NewTicker(time.Second * 3)
 	defer pingTicker.Stop()
-	defer conn.Close()
 
 	for {
 		<-pingTicker.C
-		soc.ConnMu.Lock()
+
 		ping := &types.Ping{Ping: time.Now().UnixMilli(), Message: "Hi"}
 		marshal, _ := json.Marshal(&ping)
-
-		err := conn.WriteMessage(websocket.PingMessage, marshal)
-		if err != nil {
-			break
-		}
-
-		soc.ConnMu.Unlock()
-	}
+		ConnectionHub.Broadcast("ping", marshal)
+	}	
 }
 
-func socketReader(soc *types.Connection) {
+func socketReader(soc *Connection) {
 	conn := soc.Conn
 	for {
 		messageType, p, err := conn.ReadMessage()
@@ -85,7 +75,9 @@ func socketReader(soc *types.Connection) {
 					Payload: err.Error(),
 					Ts: time.Now().UnixMilli(),
 				}
-				socketWriter(soc, *message)
+
+				marshalled, _ := json.Marshal(message)
+				soc.SendMessage(websocket.TextMessage, marshalled)
 			}
 		case types.UNSUB:
 			ConnectionHub.UnSubscribe(conn.RemoteAddr().String(), message.Ch)
@@ -95,17 +87,10 @@ func socketReader(soc *types.Connection) {
 				Payload: "invalid request",
 				Ts:      time.Hour.Milliseconds(),
 			}
-			socketWriter(soc, *message)
+			marshalled, _ := json.Marshal(message)
+			soc.SendMessage(websocket.TextMessage, marshalled)
 			continue
 		}
 	}
 }
 
-func socketWriter(soc *types.Connection, message types.Message) error {
-	soc.ConnMu.Lock()
-	defer soc.ConnMu.Unlock()
-
-	conn := soc.Conn
-	marshalled, _ := json.Marshal(message)
-	return conn.WriteMessage(websocket.TextMessage, marshalled)
-}

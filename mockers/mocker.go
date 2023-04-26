@@ -28,7 +28,6 @@ func StartMockers() {
 
 func ProduceMockData(name string, channel chan<- *types.Message) {
 	for {
-		time.Sleep(ONE_SEC)
 		message := &types.Message{
 			Ch:      name,
 			Payload: fmt.Sprintf("Ping from %s", name),

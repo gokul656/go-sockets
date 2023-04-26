@@ -18,6 +18,8 @@ func main() {
 
 	mockers.StartMockers()
 
+	go handlers.PingHandler()
+
 	http.HandleFunc("/ws", handlers.RootHandler)
 	http.ListenAndServe(*addr, nil)
 }
