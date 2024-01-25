@@ -1,0 +1,62 @@
+.status-alive {
+    min-width: 10px;
+    height: 10px;
+    border-radius: 100px;
+    background-color: lightgreen;
+    box-shadow: 0px 0px 8px lightgreen;
+    margin: 12px;
+    transition: 0.5s;
+    animation: status-alive 1.5s infinite;
+}
+
+.status-dead {
+    min-width: 10px;
+    height: 10px;
+    border-radius: 100px;
+    background-color: lightcoral;
+    box-shadow: 0px 0px 8px lightcoral;
+    margin: 12px;
+    transition: 0.5s;
+    animation: status-dead 1.5s infinite;
+}
+
+.health {
+    float: left;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+@keyframes status-alive {
+    from {
+        opacity: 80%;
+        box-shadow: 0px 0px 3px lightgreen;
+    }
+
+    50% {
+        opacity: 100%;
+        box-shadow: 0px 0px 10px green;
+    }
+
+    to {
+        opacity: 80%;
+        box-shadow: 0px 0px 3px lightgreen;
+    }
+}
+
+@keyframes status-dead {
+    from {
+        opacity: 80%;
+        box-shadow: 0px 0px 3px lightcoral;
+    }
+
+    50% {
+        opacity: 100%;
+        box-shadow: 0px 0px 10px red;
+    }
+
+    to {
+        opacity: 80%;
+        box-shadow: 0px 0px 3px lightcoral;
+    }
+}

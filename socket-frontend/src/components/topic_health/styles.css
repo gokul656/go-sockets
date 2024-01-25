@@ -1,0 +1,30 @@
+.topic-health-box {
+    width: fit-content;
+}
+
+.topic-title-box {
+    margin: 12px 12px 0px;
+    background-color: #1a1a1a;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.topic-health {
+    height: fit-content;
+    width: fit-content;
+    background-color: #1a1a1a;
+    padding: 12px;
+    margin: 12px 12px 0px;
+    border-radius: 12px;
+    text-transform: capitalize;
+}
+
+.topic {
+    display: flex;
+    align-items: center;
+    margin-right: 20px !important;
+}
+
+.topic-h3 {
+    margin: 0px;
+  }

@@ -1,0 +1,33 @@
+.hub-detail {
+    background-color: #1a1a1a;
+    border-radius: 12px;
+    width: fit-content;
+    margin: 12px;
+    padding: 16px;
+}
+
+.ant-table-thead {
+    background-color: red !important;
+}
+
+
+.ant-table-content {
+    background-color: #1a1a1a;
+    color: white;
+}
+
+.ant-table-cell-row-hover {
+    background-color: #292929 !important;
+}
+
+.active-connections {
+    background-color: #1a1a1a;
+    border-radius: 12px;
+    width: 100%;
+    margin: 12px;
+    padding: 16px;    
+}
+
+.active-connection-box {
+    width: fit-content;
+}

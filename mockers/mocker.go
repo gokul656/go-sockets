@@ -3,9 +3,10 @@ package mockers
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
-	"github.com/gokul656/go-sockets/handlers"
+	"github.com/gokul656/go-sockets/internal"
 	"github.com/gokul656/go-sockets/types"
 )
 
@@ -19,14 +20,17 @@ var (
 )
 
 func StartMockers() {
-	go ProduceMockData("market", marketch)
-	go ProduceMockData("ticket", tickerch)
+	wg := sync.WaitGroup{}
+	go ProduceMockData("market", marketch, &wg)
+	go ProduceMockData("ticker", tickerch, &wg)
 
-	go PublishMockData("market", marketch)
-	go PublishMockData("ticker", tickerch)
+	go PublishMockData("market", marketch, &wg)
+	go PublishMockData("ticker", tickerch, &wg)
+
+	wg.Wait()
 }
 
-func ProduceMockData(name string, channel chan<- *types.Message) {
+func ProduceMockData(name string, channel chan<- *types.Message, wg *sync.WaitGroup) {
 	for {
 		message := &types.Message{
 			Ch:      name,
@@ -34,14 +38,20 @@ func ProduceMockData(name string, channel chan<- *types.Message) {
 			Ts:      time.Now().UnixMilli(),
 		}
 
+		time.Sleep(1 * time.Second)
 		channel <- message
 	}
 }
 
-func PublishMockData(topic string, channel <-chan *types.Message) {
+func PublishMockData(topic string, channel <-chan *types.Message, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
 	for {
-		message := <-channel
+		message, ok := <-channel
+		if !ok {
+			break
+		}
 		marshalled, _ := json.Marshal(message)
-		handlers.ConnectionHub.Broadcast(topic, marshalled)
+		internal.ConnectionHub.Broadcast(topic, marshalled)
 	}
 }
